@@ -1,61 +1,152 @@
-<a href="index.html">prev</a>
-<div>Alex Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-  // More API functions here:
-  // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alex's Teachable Machine Image Model</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 text-gray-800 font-sans antialiased">
+    <div class="max-w-3xl mx-auto p-4 sm:p-6">
+      <header class="flex justify-between items-center mb-6">
+        <a
+          href="index.html"
+          class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-700 font-medium transition-colors"
+          >← Back</a
+        >
+      </header>
 
-  // the link to your model provided by Teachable Machine export panel
-  const URL = "https://teachablemachine.withgoogle.com/models/9jyq5Y1g5/";
+      <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">
+        Alex's Teachable Machine Image Model
+      </h1>
 
-  let model, webcam, labelContainer, maxPredictions;
+      <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+        <p class="text-gray-600 mb-6">
+          This application uses a machine learning model to identify objects
+          through your webcam. Click the Start button to begin.
+        </p>
 
-  // Load the image model and setup the webcam
-  async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
+        <button
+          id="startButton"
+          onclick="init()"
+          class="block mx-auto px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-md shadow-sm transition-all active:transform active:scale-95"
+        >
+          Start Camera
+        </button>
 
-    // load the model and metadata
-    // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-    // or files from your local hard drive
-    // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-    model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
+        <div id="webcam-container" class="flex justify-center my-8"></div>
 
-    // Convenience function to setup a webcam
-    const flip = true; // whether to flip the webcam
-    webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-    await webcam.setup(); // request access to the webcam
-    await webcam.play();
-    window.requestAnimationFrame(loop);
+        <div
+          id="label-container"
+          class="bg-gray-50 p-4 rounded-md shadow-inner"
+        >
+          <p class="text-gray-500">
+            Predictions will appear here after starting the camera...
+          </p>
+        </div>
+      </div>
 
-    // append elements to the DOM
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
-    labelContainer = document.getElementById("label-container");
-    for (let i = 0; i < maxPredictions; i++) {
-      // and class labels
-      labelContainer.appendChild(document.createElement("div"));
-    }
-  }
+      <footer class="text-center text-gray-500 text-sm mt-8">
+        <p>Powered by TensorFlow.js and Teachable Machine</p>
+      </footer>
+    </div>
 
-  async function loop() {
-    webcam.update(); // update the webcam frame
-    await predict();
-    window.requestAnimationFrame(loop);
-  }
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+      // More API functions here:
+      // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
-  // run the webcam image through the image model
-  async function predict() {
-    // predict can take in an image, video or canvas html element
-    const prediction = await model.predict(webcam.canvas);
-    for (let i = 0; i < maxPredictions; i++) {
-      const classPrediction =
-        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-      labelContainer.childNodes[i].innerHTML = classPrediction;
-    }
-  }
-</script>
+      // The link to your model provided by Teachable Machine export panel
+      const URL = "https://teachablemachine.withgoogle.com/models/9jyq5Y1g5/";
+
+      let model, webcam, labelContainer, maxPredictions;
+      const startButton = document.getElementById("startButton");
+
+      // Load the image model and setup the webcam
+      async function init() {
+        startButton.disabled = true;
+        startButton.textContent = "Loading...";
+        startButton.classList.add("opacity-70");
+
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // Load the model and metadata
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const flip = true; // whether to flip the webcam
+        webcam = new tmImage.Webcam(300, 300, flip); // width, height, flip
+
+        try {
+          await webcam.setup(); // request access to the webcam
+          await webcam.play();
+          window.requestAnimationFrame(loop);
+
+          // Clear and append elements to the DOM
+          document.getElementById("webcam-container").innerHTML = "";
+          const webcamElement = webcam.canvas;
+          webcamElement.classList.add("rounded-lg", "shadow-md");
+          document
+            .getElementById("webcam-container")
+            .appendChild(webcamElement);
+
+          labelContainer = document.getElementById("label-container");
+          labelContainer.innerHTML = ""; // Clear placeholder text
+          labelContainer.classList.add("space-y-3");
+
+          for (let i = 0; i < maxPredictions; i++) {
+            // Add class labels
+            const element = document.createElement("div");
+            element.classList.add("p-3", "bg-white", "rounded-md", "shadow-sm");
+            labelContainer.appendChild(element);
+          }
+
+          startButton.textContent = "Camera Active";
+          startButton.classList.add("bg-green-500");
+          startButton.classList.remove("bg-blue-500", "hover:bg-blue-600");
+          startButton.classList.add("bg-green-500", "hover:bg-green-600");
+        } catch (error) {
+          startButton.disabled = false;
+          startButton.textContent = "Start Camera";
+          startButton.classList.remove("opacity-70");
+
+          labelContainer.innerHTML =
+            '<p class="text-red-500 font-medium">Error accessing camera. Please check permissions and try again.</p>';
+        }
+      }
+
+      async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+      }
+
+      // Run the webcam image through the image model
+      async function predict() {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(webcam.canvas);
+
+        for (let i = 0; i < maxPredictions; i++) {
+          const probability = prediction[i].probability.toFixed(2);
+          const percentage = Math.round(probability * 100);
+
+          // Create the prediction display with Tailwind classes
+          const predictionEl = labelContainer.childNodes[i];
+          predictionEl.innerHTML = `
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-medium">${prediction[i].className}</span>
+            <span class="text-sm font-semibold">${percentage}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${percentage}%"></div>
+          </div>
+        `;
+        }
+      }
+    </script>
+  </body>
+</html>
